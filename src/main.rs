@@ -90,6 +90,18 @@ impl Snake {
         let new_snake : SnakePiece = SnakePiece {display_char : "#".to_string(), x : end.x - end.dx, y : end.y - end.dy, dx : end.dx, dy : end.dy };
         self.snake_body.push(new_snake);
     }
+
+    fn check_self_collision(&mut self) -> bool {
+        let coords : Vec<(isize, isize)> = self.snake_body.iter().map(|piece| (piece.x, piece.y)).collect();
+        
+        let mut copy = coords.to_vec();
+        copy.sort();
+        copy.dedup();
+        if copy.len()< coords.len(){
+            return true;
+        };
+        false    
+    }
 }
     
 
@@ -182,8 +194,8 @@ impl Matrix {
 
             player.update(self);
 
-            if self.edge_collision(&player) {
-                queue!(stdout(), Print("Snake went out of bounds... Better luck next time.. "))?;
+            if self.edge_collision(&player) ||player.check_self_collision() {
+                queue!(stdout(), Print("Snake was obstructed...  Better luck next time.. "))?;
                 break;
             }
 
