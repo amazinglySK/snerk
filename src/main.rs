@@ -1,11 +1,11 @@
-use std::io::{stdout};
+use std::io::stdout;
 use std::time::Duration;
 use crossterm::{
     cursor,
     event::{read, Event, KeyCode, poll, KeyEvent},
     execute,
     terminal::{Clear, ClearType},
-    Result, queue, style::Print
+    Result, queue, style::{Print, Color, SetForegroundColor}
 };  
 use rand::{thread_rng, Rng};
 use std::fmt::{Formatter, Display, self};
@@ -85,9 +85,12 @@ impl Snake {
         false
     }
 
-    fn extend(&mut self){
+
+    fn extend(&mut self, size : usize){
         let end: &SnakePiece = self.snake_body.last().unwrap();
-        let new_snake : SnakePiece = SnakePiece {display_char : "#".to_string(), x : end.x - end.dx, y : end.y - end.dy, dx : end.dx, dy : end.dy };
+        let (x, y, dx, dy) =  (end.x - end.dx, end.y - end.dy, end.dx, end.dy);
+        if x < 0 || x as usize >=size || y < 0 || y as usize >= size {return}
+        let new_snake : SnakePiece = SnakePiece {display_char : "#".to_string(), x, y, dx, dy};
         self.snake_body.push(new_snake);
     }
 
@@ -119,6 +122,7 @@ impl Point {
 struct Matrix {
     food : Food,
     size : usize,
+    score : usize,
     matrix : Vec<Vec<Point>>
 }
 
@@ -133,7 +137,7 @@ impl Matrix {
             }
             matrix.push(row);
         }
-        Matrix { matrix, food: Food::new(row, 0) , size : row}
+        Matrix { matrix, food: Food::new(row, 0) , size : row, score : 0}
     }
 
     fn get_point(&mut self, x :usize, y: usize ) -> &mut Point {
@@ -189,16 +193,21 @@ impl Matrix {
             
             if player.collision(&mut self.food) {
                 self.food = Food::new(self.size, 0);
-                player.extend();
+                self.score += 100;
+                player.extend(self.size);
             }
 
             player.update(self);
 
             if self.edge_collision(&player) ||player.check_self_collision() {
-                queue!(stdout(), Print("Snake was obstructed...  Better luck next time.. "))?;
+                queue!(stdout(), 
+                       SetForegroundColor(Color::Cyan),
+                       Print(format!("\n\nYour score : {}\n\n", &self.score)),
+                       Print("Snake was obstructed...  Better luck next time..\n\n")
+                )?;
                 break;
             }
-
+            self.score += 10;
             self.draw_food();
             self.draw_snake(player);
             
@@ -227,7 +236,7 @@ impl Display for Matrix {
 
 fn main(){
     let mut board = Matrix::new(15, 15);
-    let mut player = Snake::new(2, 2);  
+    let mut player = Snake::new(2, 2);
     println!("{}", board);
     let _ = board.game_loop(&mut player);
 }
